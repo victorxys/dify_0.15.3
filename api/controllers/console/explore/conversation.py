@@ -23,7 +23,10 @@ class ConversationListApi(InstalledAppResource):
         app_mode = AppMode.value_of(app_model.mode)
         if app_mode not in {AppMode.CHAT, AppMode.AGENT_CHAT, AppMode.ADVANCED_CHAT}:
             raise NotChatAppError()
-
+        # --- 在这里添加打印语句 ---
+        print("--- Inspecting current_user ---")
+        print(f"Type: {type(current_user)}")
+        print(f"Is Authenticated: {current_user.is_authenticated}")
         parser = reqparse.RequestParser()
         parser.add_argument("last_id", type=uuid_value, location="args")
         parser.add_argument("limit", type=int_range(1, 100), required=False, default=20, location="args")

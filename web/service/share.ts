@@ -30,6 +30,60 @@ export function getUrl(url: string, isInstalledApp: boolean, installedAppId: str
   return isInstalledApp ? `installed-apps/${installedAppId}/${url.startsWith('/') ? url.slice(1) : url}` : url
 }
 
+// 添加 JWT 解码函数
+const parseJwt = (token: string) => {
+  try {
+    const base64Url = token.split('.')[1]
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map((c) => {
+      return `%${(`00${c.charCodeAt(0).toString(16)}`).slice(-2)}`
+    }).join(''))
+    return JSON.parse(jsonPayload)
+  }
+  catch (error) {
+    console.error('Failed to parse JWT token:', error)
+    return null
+  }
+}
+
+// 获取当前用户ID
+export const getCurrentUser = () => {
+  const cookies = document.cookie.split(';')
+  const cookieKey = 'auth_token' // 使用您定义的 TOKEN_KEY
+  const authTokenCookie = cookies.find(cookie => cookie.trim().startsWith(`${cookieKey}=`))
+
+  if (!authTokenCookie) {
+    // console.log('getCurrentUser: auth_token cookie not found.'); // 按需保留或移除日志
+    return null // Cookie 不存在，返回 null
+  }
+
+  // 安全地提取 token 值
+  const token = authTokenCookie.split('=')[1]?.trim()
+  if (!token) {
+    // console.log('getCurrentUser: Token value is empty after splitting cookie.'); // 按需保留或移除日志
+    return null // Cookie 存在但值为空
+  }
+  // console.log('getCurrentUser: Token value======:', token); // 按需保留或移除日志
+
+  const decoded = parseJwt(token)
+  // console.log('getCurrentUser: Decoded JWT payload:', decoded); // 按需保留或移除日志
+
+  // 检查解码后的 payload 以及是否存在 user_id (对应 Account Token)
+  if (decoded && decoded.user_id) {
+    // console.log('getCurrentUser: Decoded Console/Account token payload:', decoded); // 按需保留或移除日志
+    return {
+      // 返回一个统一的结构，方便调用方使用
+      // 注意：这里返回的是 Account ID
+      type: 'account', // 可以加个类型区分
+      userId: decoded.user_id,
+    }
+  }
+  else {
+    // console.log('getCurrentUser: Failed to decode token or find relevant user ID.', decoded); // 按需保留或移除日志
+    return null // 解码失败或未找到需要的 ID
+  }
+}
+
 export const sendChatMessage = async (body: Record<string, any>, { onData, onCompleted, onThought, onFile, onError, getAbortController, onMessageEnd, onMessageReplace, onTTSChunk, onTTSEnd }: {
   onData: IOnData
   onCompleted: IOnCompleted
@@ -222,6 +276,13 @@ export const textToAudioStream = (url: string, isPublicAPI: boolean, header: { c
 
 export const fetchAccessToken = async (appCode: string) => {
   const headers = new Headers()
+  const currentUserInfo = getCurrentUser()
+  // console.log('fetchAccessToken: currentUserInfo:', currentUserInfo.userId); // 调试日志
+  if (currentUserInfo)
+    headers.append('X-User-Id', currentUserInfo.userId)
+
   headers.append('X-App-Code', appCode)
+  // headers.append('X-User-Id', 'test-user-id')
+  // console.log('fetchAccessToken: headers:', headers); // 调试日志
   return get('/passport', { headers }) as Promise<{ access_token: string }>
 }

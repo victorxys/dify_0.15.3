@@ -1,4 +1,5 @@
 from flask import Blueprint
+from flask_restful import Api
 
 from libs.external_api import ExternalApi
 
@@ -26,7 +27,7 @@ from .files import FileApi, FilePreviewApi, FileSupportTypeApi
 from .remote_files import RemoteFileInfoApi, RemoteFileUploadApi
 
 bp = Blueprint("console", __name__, url_prefix="/console/api")
-api = ExternalApi(bp)
+api = Api(bp)
 
 # File
 api.add_resource(FileApi, "/files/upload")
@@ -68,6 +69,8 @@ from .app import (
 
 # Import auth controllers
 from .auth import activate, data_source_bearer_auth, data_source_oauth, forgot_password, login, oauth
+
+from .auth import LoginApi, RegisterApi
 
 # Import billing controllers
 from .billing import billing
@@ -167,3 +170,8 @@ from .tag import tags
 
 # Import workspace controllers
 from .workspace import account, load_balancing_config, members, model_providers, models, tool_providers, workspace
+
+# # 注册 login 路由
+# api.add_resource(LoginApi, '/auth/login')
+# # 注册 register 路由
+# api.add_resource(RegisterApi, '/auth/register')

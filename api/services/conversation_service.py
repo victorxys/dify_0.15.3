@@ -32,21 +32,55 @@ class ConversationService:
     ) -> InfiniteScrollPagination:
         if not user:
             return InfiniteScrollPagination(data=[], limit=limit, has_more=False)
-
+        
+        print("\n=== 对话列表查询开始 ===")
+        print(f"用户信息:")
+        print(f"- 类型: {user.__class__.__name__}")
+        print(f"- ID: {user.id}")
+        print(f"- 应用ID: {app_model.id}")
+        # from_source = "api" if isinstance(user, EndUser) else "console" 此处对 api console 进行了对调
+        from_source = "console" if isinstance(user, EndUser) else "api"
+        from_end_user_id = user.id if isinstance(user, EndUser) else None
+        from_account_id = user.id if isinstance(user, Account) else None
+        
+        print(f"\n查询条件:")
+        print(f"- 来源 (from_source): {from_source}")
+        print(f"- 终端用户ID (from_end_user_id): {from_account_id}")
+        print(f"- 账户ID (from_account_id): {from_end_user_id}")
+        
         stmt = select(Conversation).where(
             Conversation.is_deleted == False,
             Conversation.app_id == app_model.id,
-            Conversation.from_source == ("api" if isinstance(user, EndUser) else "console"),
-            Conversation.from_end_user_id == (user.id if isinstance(user, EndUser) else None),
-            Conversation.from_account_id == (user.id if isinstance(user, Account) else None),
+            Conversation.from_source == from_source,
+            # 由于conversation表中使用 enduser_id 作为记录的，但是现在改为了 用户类型为 account 所以 from_end_user_id 为空
+            # 因此为了可以按当前用户 account_id 来查询此用户的所有对话，这里互换来了查询的值，用 from_account_id来查询
+            Conversation.from_end_user_id == from_account_id,
+            Conversation.from_account_id == from_end_user_id,
             or_(Conversation.invoke_from.is_(None), Conversation.invoke_from == invoke_from.value),
         )
+        
+        # 执行查询并打印结果
+        initial_query = stmt.order_by(desc(Conversation.updated_at)).limit(limit)
+        initial_results = session.scalars(initial_query).all()
+        
+        print("\n=== 查询结果 ===")
+        print(f"查询到记录数: {len(initial_results)}")
+        if initial_results:
+            print("示例记录(前3条):")
+            for conv in initial_results[:3]:
+                print(f"  * 对话ID: {conv.id}")
+                print(f"    来源: {conv.from_source}")
+                print(f"    账户ID: {conv.from_account_id}")
+                print(f"    终端用户ID: {conv.from_end_user_id}")
+        print("=== 查询结果结束 ===\n")
+
+        # 应用过滤条件
         if include_ids is not None:
             stmt = stmt.where(Conversation.id.in_(include_ids))
         if exclude_ids is not None:
             stmt = stmt.where(~Conversation.id.in_(exclude_ids))
 
-        # define sort fields and directions
+        # 设置排序参数
         sort_field, sort_direction = cls._get_sort_params(sort_by)
 
         if last_id:
@@ -64,6 +98,7 @@ class ConversationService:
         query_stmt = stmt.order_by(sort_direction(getattr(Conversation, sort_field))).limit(limit)
         conversations = session.scalars(query_stmt).all()
 
+        # 检查是否有更多数据
         has_more = False
         if len(conversations) == limit:
             current_page_last_conversation = conversations[-1]
@@ -74,8 +109,15 @@ class ConversationService:
             )
             count_stmt = select(func.count()).select_from(stmt.where(rest_filter_condition).subquery())
             rest_count = session.scalar(count_stmt) or 0
-            if rest_count > 0:
-                has_more = True
+            has_more = rest_count > 0
+
+        print("\n=== 最终分页结果 ===")
+        print(f"- 本页记录数: {len(conversations)}")
+        print(f"- 分页大小: {limit}")
+        print(f"- 是否有下一页: {has_more}")
+        if conversations:
+            print(f"- 本页最后一条记录ID: {conversations[-1].id}")
+        print("=== 查询完成 ===\n")
 
         return InfiniteScrollPagination(data=conversations, limit=limit, has_more=has_more)
 
@@ -141,14 +183,24 @@ class ConversationService:
 
     @classmethod
     def get_conversation(cls, app_model: App, conversation_id: str, user: Optional[Union[Account, EndUser]]):
+        print("\n=== 获取单个对话 ===")
+        print(f"用户信息:")
+        print(f"- 类型: {user.__class__.__name__}")
+        print(f"- ID: {user.id}")
+        print(f"- 应用ID: {app_model.id}")
+        print(f"请求的对话ID: {conversation_id}")
+
+         # from_source = "api" if isinstance(user, EndUser) else "console" 此处对 api console 进行了对调
+        from_source = "console" if isinstance(user, EndUser) else "api"
+
         conversation = (
             db.session.query(Conversation)
             .filter(
                 Conversation.id == conversation_id,
                 Conversation.app_id == app_model.id,
-                Conversation.from_source == ("api" if isinstance(user, EndUser) else "console"),
-                Conversation.from_end_user_id == (user.id if isinstance(user, EndUser) else None),
-                Conversation.from_account_id == (user.id if isinstance(user, Account) else None),
+                Conversation.from_source == ("console" if isinstance(user, EndUser) else "api"), #此处对api 与 console 进行了对调
+                Conversation.from_end_user_id == (user.id if isinstance(user, Account) else None), # 此处对Account 与 EndUser 进行了对调
+                Conversation.from_account_id == (user.id if isinstance(user, EndUser) else None), # 此处对Account 与 EndUser 进行了对调
                 Conversation.is_deleted == False,
             )
             .first()
@@ -161,8 +213,24 @@ class ConversationService:
 
     @classmethod
     def delete(cls, app_model: App, conversation_id: str, user: Optional[Union[Account, EndUser]]):
-        conversation = cls.get_conversation(app_model, conversation_id, user)
+        print("\n=== 删除对话开始 ===")
+        print(f"用户信息:")
+        print(f"- 类型: {user.__class__.__name__}")
+        print(f"- ID: {user.id}")
+        print(f"要删除的对话ID: {conversation_id}")
 
+        # 获取对话信息
+        conversation = cls.get_conversation(app_model, conversation_id, user)
+        if not conversation:
+            print("未找到对话，删除失败")
+            raise ConversationNotExistsError()
+
+        # 执行删除操作
         conversation.is_deleted = True
         conversation.updated_at = datetime.now(UTC).replace(tzinfo=None)
         db.session.commit()
+
+        print(f"对话删除成功:")
+        print(f"- 对话ID: {conversation.id}")
+        print(f"- 删除时间: {conversation.updated_at}")
+        print("=== 删除对话完成 ===\n")

@@ -9,6 +9,7 @@ from controllers.web.error import WebSSOAuthRequiredError
 from extensions.ext_database import db
 from libs.passport import PassportService
 from models.model import App, EndUser, Site
+# from models.account import Account
 from services.enterprise.enterprise_service import EnterpriseService
 from services.feature_service import FeatureService
 
@@ -19,6 +20,9 @@ class PassportResource(Resource):
     def get(self):
         system_features = FeatureService.get_system_features()
         app_code = request.headers.get("X-App-Code")
+        account_id = request.headers.get("X-User-Id")
+        # print(f"account_id=====: {account_id}")
+        # account= Account(id=account_id)
         if app_code is None:
             raise Unauthorized("X-App-Code header is missing.")
 
@@ -53,6 +57,7 @@ class PassportResource(Resource):
             "app_id": site.app_id,
             "app_code": app_code,
             "end_user_id": end_user.id,
+            "account_id": account_id,  # 此处增加了 account_id
         }
 
         tk = PassportService().issue(payload)

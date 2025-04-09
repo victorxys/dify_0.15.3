@@ -8,6 +8,7 @@ from controllers.web.error import WebSSOAuthRequiredError
 from extensions.ext_database import db
 from libs.passport import PassportService
 from models.model import App, EndUser, Site
+from models.account import Account
 from services.enterprise.enterprise_service import EnterpriseService
 from services.feature_service import FeatureService
 
@@ -16,9 +17,11 @@ def validate_jwt_token(view=None):
     def decorator(view):
         @wraps(view)
         def decorated(*args, **kwargs):
-            app_model, end_user = decode_jwt_token()
+            # 这里从 end_user 改为 account 此时返回的就全是 account 对象了，但是由于后面应用此处的太多了，仍然都是 end_user 没有做修改。
+            # 但实际上取值已经是 account 了
+            app_model, account = decode_jwt_token()
 
-            return view(app_model, end_user, *args, **kwargs)
+            return view(app_model, account, *args, **kwargs)
 
         return decorated
 
@@ -32,6 +35,9 @@ def decode_jwt_token():
     app_code = request.headers.get("X-App-Code")
     try:
         auth_header = request.headers.get("Authorization")
+        account_id = request.headers.get("X-User-Id")
+        print(f"account_id=====: {account_id}")
+        print(f"Authorization header=====: {auth_header}")
         if auth_header is None:
             raise Unauthorized("Authorization header is missing.")
 
@@ -44,6 +50,7 @@ def decode_jwt_token():
         if auth_scheme != "bearer":
             raise Unauthorized("Invalid Authorization header format. Expected 'Bearer <api-key>' format.")
         decoded = PassportService().verify(tk)
+        print(f"decoded=====: {decoded}")
         app_code = decoded.get("app_code")
         app_model = db.session.query(App).filter(App.id == decoded["app_id"]).first()
         site = db.session.query(Site).filter(Site.code == app_code).first()
@@ -54,12 +61,16 @@ def decode_jwt_token():
         if app_model.enable_site is False:
             raise BadRequest("Site is disabled.")
         end_user = db.session.query(EndUser).filter(EndUser.id == decoded["end_user_id"]).first()
+        account = db.session.query(Account).filter(Account.id == decoded["account_id"]).first()
         if not end_user:
             raise NotFound()
+        if not account:
+            raise NotFound()
+            
 
         _validate_web_sso_token(decoded, system_features, app_code)
 
-        return app_model, end_user
+        return app_model, account
     except Unauthorized as e:
         if system_features.sso_enforced_for_web:
             app_web_sso_enabled = EnterpriseService.get_app_web_sso_enabled(app_code).get("enabled", False)

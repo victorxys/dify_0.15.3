@@ -100,9 +100,13 @@ class AccountService:
 
     @staticmethod
     def load_user(user_id: str) -> None | Account:
+        print("\n=== User Loading Process ===")
+        print(f"Loading user with ID: {user_id}")
         account = Account.query.filter_by(id=user_id).first()
         if not account:
+            print("No account found")
             return None
+        print(f"Account found - Type: {type(account)}")
 
         if account.status == AccountStatus.BANNED.value:
             raise Unauthorized("Account is banned.")
@@ -203,22 +207,30 @@ class AccountService:
         is_setup: Optional[bool] = False,
     ) -> Account:
         """create account"""
-        if not FeatureService.get_system_features().is_allow_register and not is_setup:
-            from controllers.console.error import AccountNotFound
+        print("create_account222")
+        # if not FeatureService.get_system_features().is_allow_register and not is_setup:
+        #     print("不允许注册-is_allow_register",FeatureService.get_system_features().is_allow_register)
+        #     print("不允许注册-is_setup",is_setup)
+                  
+        #     from controllers.console.error import AccountNotFound
 
-            raise AccountNotFound()
+        #     raise AccountNotFound()
 
+        print("检查email是否可用")
         if dify_config.BILLING_ENABLED and BillingService.is_email_in_freeze(email):
+            print("也不允许注册")
             raise AccountRegisterError(
                 description=(
                     "This email account has been deleted within the past "
                     "30 days and is temporarily unavailable for new account registration"
                 )
             )
-
+        print("account-email",email)
         account = Account()
         account.email = email
         account.name = name
+        print("account-email",email)
+        print("account-name",email)
 
         if password:
             # generate password salt
@@ -237,9 +249,10 @@ class AccountService:
 
         # Set timezone based on language
         account.timezone = language_timezone_mapping.get(interface_language, "UTC")
-
+        
         db.session.add(account)
         db.session.commit()
+        print("设置accoutn信息完毕，返回account")
         return account
 
     @staticmethod
@@ -247,12 +260,13 @@ class AccountService:
         email: str, name: str, interface_language: str, password: Optional[str] = None
     ) -> Account:
         """create account"""
+        print("create_account_and_tenant")
         account = AccountService.create_account(
             email=email, name=name, interface_language=interface_language, password=password
         )
-
+        print("继续创建用户与租户")
         TenantService.create_owner_tenant_if_not_exist(account=account)
-
+        print("创建账号与租户完毕，返回account:",account)
         return account
 
     @staticmethod
@@ -469,6 +483,7 @@ class AccountService:
             )
 
         account = db.session.query(Account).filter(Account.email == email).first()
+        # print("查重account", account)
         if not account:
             return None
 
@@ -574,6 +589,7 @@ class TenantService:
         account: Account, name: Optional[str] = None, is_setup: Optional[bool] = False
     ):
         """Check if user have a workspace or not"""
+        print("create_owner_tenant_if_not_exist")
         available_ta = (
             TenantAccountJoin.query.filter_by(account_id=account.id).order_by(TenantAccountJoin.id.asc()).first()
         )
@@ -582,6 +598,7 @@ class TenantService:
             return
 
         """Create owner tenant if not exist"""
+        print("Create owner tenant if not exist")
         if not FeatureService.get_system_features().is_allow_create_workspace and not is_setup:
             raise WorkSpaceNotAllowedCreateError()
 
@@ -597,6 +614,7 @@ class TenantService:
     @staticmethod
     def create_tenant_member(tenant: Tenant, account: Account, role: str = "normal") -> TenantAccountJoin:
         """Create tenant member"""
+        print("create_owner_tenant_if_not_exist")
         if role == TenantAccountJoinRole.OWNER.value:
             if TenantService.has_roles(tenant, [TenantAccountJoinRole.OWNER]):
                 logging.error(f"Tenant {tenant.id} has already an owner.")

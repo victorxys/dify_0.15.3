@@ -7,6 +7,7 @@ from flask_restful.inputs import int_range  # type: ignore
 from sqlalchemy import func, or_
 from sqlalchemy.orm import joinedload
 from werkzeug.exceptions import Forbidden, NotFound
+from sqlalchemy.dialects import postgresql
 
 from controllers.console import api
 from controllers.console.app.wraps import get_app_model
@@ -21,7 +22,7 @@ from fields.conversation_fields import (
 )
 from libs.helper import DatetimeString
 from libs.login import login_required
-from models import Conversation, EndUser, Message, MessageAnnotation
+from models import Conversation, EndUser, Message, MessageAnnotation, Account
 from models.model import AppMode
 
 
@@ -170,8 +171,13 @@ class ChatConversationApi(Resource):
             .subquery()
         )
 
-        query = db.select(Conversation).where(Conversation.app_id == app_model.id)
-
+        query = db.select(
+            Conversation,
+            Account.name.label("from_end_user_account_name")
+        ).where(Conversation.app_id == app_model.id) \
+         .outerjoin(Account, Conversation.from_end_user_id == Account.id)
+        compiled = query.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True})
+        print(str(compiled))
         if args["keyword"]:
             keyword_filter = "%{}%".format(args["keyword"])
             query = (
@@ -189,8 +195,11 @@ class ChatConversationApi(Resource):
                         subquery.c.from_end_user_session_id.ilike(keyword_filter),
                     ),
                 )
-                .group_by(Conversation.id)
+                .group_by(Conversation.id, Account.id) # 添加 Account.id
+
             )
+        else:
+            query = query.group_by(Conversation.id, Account.id) # 添加 group_by
 
         account = current_user
         timezone = pytz.timezone(account.timezone)
@@ -257,6 +266,15 @@ class ChatConversationApi(Resource):
                 query = query.order_by(Conversation.created_at.desc())
 
         conversations = db.paginate(query, page=args["page"], per_page=args["limit"], error_out=False)
+        if conversations.items:
+            first_conversation = conversations.items[0]
+            print(first_conversation.__dict__)
+        for item in conversations.items[:5]:  # 打印前 5 个元素
+            print(item)
+            if isinstance(item, tuple):
+                print(item[1]) # 如果是元组，打印第二个元素 (account_name)
+            else:
+                print(getattr(item, 'from_end_user_account_name', None)) # 如果是对象，尝试获取属性
 
         return conversations
 
@@ -302,6 +320,7 @@ api.add_resource(CompletionConversationApi, "/apps/<uuid:app_id>/completion-conv
 api.add_resource(CompletionConversationDetailApi, "/apps/<uuid:app_id>/completion-conversations/<uuid:conversation_id>")
 api.add_resource(ChatConversationApi, "/apps/<uuid:app_id>/chat-conversations")
 api.add_resource(ChatConversationDetailApi, "/apps/<uuid:app_id>/chat-conversations/<uuid:conversation_id>")
+# /installed-apps/<uuid:installed_app_id>/conversations
 
 
 def _get_conversation(app_model, conversation_id):

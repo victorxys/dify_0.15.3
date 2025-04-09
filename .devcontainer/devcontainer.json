@@ -4,7 +4,11 @@
 	"name": "Python 3.12",
 	"build": { 
 		"context": "..",
-		"dockerfile": "Dockerfile"
+		"dockerfile": "Dockerfile",
+		"args": {
+            "USER_ID": "1001",
+            "GROUP_ID": "1001"
+        }
 	},
 	"features": {
 		"ghcr.io/devcontainers/features/node:1": {
@@ -32,8 +36,12 @@
 			]
 		}
 	},
-	"postStartCommand": "./.devcontainer/post_start_command.sh",
-	"postCreateCommand": "./.devcontainer/post_create_command.sh"
+	// "postStartCommand": "./.devcontainer/post_start_command.sh",
+	// "postCreateCommand": "./.devcontainer/post_create_command.sh",
+	// "remoteUser": "root"
+	"remoteUser": "vscode" // 使用在 Dockerfile 中创建的用户名
+
+	
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},

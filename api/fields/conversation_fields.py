@@ -119,6 +119,7 @@ conversation_fields = {
     "from_end_user_session_id": fields.String(),
     "from_account_id": fields.String,
     "from_account_name": fields.String,
+    "from_end_user_account_name": fields.String,  # 通过end_user_id 在accounts表中找到名字
     "read_at": TimestampField,
     "created_at": TimestampField,
     "updated_at": TimestampField,
@@ -156,6 +157,7 @@ conversation_with_summary_fields = {
     "from_end_user_session_id": fields.String,
     "from_account_id": fields.String,
     "from_account_name": fields.String,
+    "from_end_user_account_name": fields.String,  # 通过end_user_id 在accounts表中找到名字
     "name": fields.String,
     "summary": fields.String(attribute="summary_or_query"),
     "read_at": TimestampField,
@@ -183,6 +185,7 @@ conversation_detail_fields = {
     "from_source": fields.String,
     "from_end_user_id": fields.String,
     "from_account_id": fields.String,
+    # "from_end_user_account_name": fields.String,  # 通过end_user_id 在accounts表中找到名字
     "created_at": TimestampField,
     "updated_at": TimestampField,
     "annotated": fields.Boolean,

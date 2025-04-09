@@ -917,3 +917,13 @@ class FeishuRequest:
             data: dict = res.get("data", {})
             return data
         return res
+
+
+# 主要功能：
+# - auth(): 验证飞书应用凭证
+# - FeishuRequest类：封装了飞书API请求
+#   - 文档操作：create_document(), write_document(), get_document_content()
+#   - 消息操作：send_bot_message(), send_webhook_message()
+#   - 日历操作：create_event(), update_event(), delete_event()
+#   - 表格操作：create_spreadsheet(), add_rows(), read_rows()
+#   - 多维表格：create_base(), add_records(), update_records()

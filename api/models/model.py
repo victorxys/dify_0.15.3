@@ -743,6 +743,18 @@ class Conversation(db.Model):  # type: ignore[name-defined]
                 return end_user.session_id
 
         return None
+    
+    @property
+    def from_end_user_account_name(self):
+        # print("from_end_user_account_name=====", self.from_end_user_id)
+        # print("conversation=====", self.id)
+        if self.from_end_user_id:
+            account = db.session.query(Account).filter(Account.id == self.from_end_user_id).first()
+            # print("account=====", account)
+            if account:
+                return account.name
+
+        return None
 
     @property
     def from_account_name(self):
@@ -1310,7 +1322,7 @@ class OperationLog(db.Model):  # type: ignore[name-defined]
     created_ip = db.Column(db.String(255), nullable=False)
     updated_at = db.Column(db.DateTime, nullable=False, server_default=func.current_timestamp())
 
-
+# 获取enduser
 class EndUser(UserMixin, db.Model):  # type: ignore[name-defined]
     __tablename__ = "end_users"
     __table_args__ = (

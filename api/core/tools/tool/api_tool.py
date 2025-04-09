@@ -320,3 +320,10 @@ class ApiTool(Tool):
 
         # assemble invoke message
         return self.create_text_message(response)
+
+# 主要功能：
+# - ApiTool类：
+#   - validate_credentials(): 验证API凭证
+#   - assembling_request(): 组装API请求
+#   - do_http_request(): 执行HTTP请求
+#   - validate_and_parse_response(): 验证和解析响应

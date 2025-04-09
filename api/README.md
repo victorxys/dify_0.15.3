@@ -5,6 +5,15 @@
 > [!IMPORTANT]
 > In the v0.6.12 release, we deprecated `pip` as the package management tool for Dify API Backend service and replaced it with `poetry`.
 
+主要步骤：
+1. 启动docker-compose中间件（PostgreSQL、Redis、Weaviate）
+2. 配置.env文件
+3. 使用Poetry管理依赖
+4. 运行数据库迁移
+5. 启动后端服务
+6. 启动异步任务worker
+7. 运行测试
+
 1. Start the docker-compose stack
 
    The backend require some middleware, including PostgreSQL, Redis, and Weaviate, which can be started together using `docker-compose`.

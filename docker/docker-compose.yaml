@@ -393,7 +393,11 @@ x-shared-env: &shared-api-worker-env
 services:
   # API service
   api:
-    image: langgenius/dify-api:0.15.2
+    # image: langgenius/dify-api:0.15.2
+    build:
+      context: ../api  # 相对于 docker-compose.yaml 的 api 目录路径
+      dockerfile: Dockerfile # api 目录下的 Dockerfile
+    image: dify-api-local:latest # 给本地镜像命名 (可选但推荐)
     restart: always
     environment:
       # Use the shared environment variables.
@@ -438,7 +442,11 @@ services:
 
   # Frontend web application.
   web:
-    image: langgenius/dify-web:0.15.2
+    # image: langgenius/dify-web:0.15.2
+    build:
+      context: ../web # 相对于 docker-compose.yaml 的 web 目录路径
+      dockerfile: Dockerfile # web 目录下的 Dockerfile
+    image: dify-web-local:latest # 给本地镜像命名 (可选但推荐)
     restart: always
     environment:
       CONSOLE_API_URL: ${CONSOLE_API_URL:-}
@@ -449,6 +457,9 @@ services:
       CSP_WHITELIST: ${CSP_WHITELIST:-}
       TOP_K_MAX_VALUE: ${TOP_K_MAX_VALUE:-}
       INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH: ${INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH:-}
+      NEXT_PUBLIC_API_PREFIX: ${NEXT_PUBLIC_API_PREFIX:-http://api:5001/console/api}
+    env_file:
+      - .env # 加载 .env 文件中的环境变量
 
   # The postgres database.
   db:
@@ -459,6 +470,8 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-difyai123456}
       POSTGRES_DB: ${POSTGRES_DB:-dify}
       PGDATA: ${PGDATA:-/var/lib/postgresql/data/pgdata}
+    ports:
+      - '5433:5432'
     command: >
       postgres -c 'max_connections=${POSTGRES_MAX_CONNECTIONS:-100}'
                -c 'shared_buffers=${POSTGRES_SHARED_BUFFERS:-128MB}'
