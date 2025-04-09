@@ -225,12 +225,12 @@ class AccountService:
                     "30 days and is temporarily unavailable for new account registration"
                 )
             )
-        print("account-email",email)
+        print("account-email", email)
         account = Account()
         account.email = email
         account.name = name
-        print("account-email",email)
-        print("account-name",email)
+        print("account-email", email)
+        print("account-name", email)
 
         if password:
             # generate password salt
@@ -266,7 +266,7 @@ class AccountService:
         )
         print("继续创建用户与租户")
         TenantService.create_owner_tenant_if_not_exist(account=account)
-        print("创建账号与租户完毕，返回account:",account)
+        print("创建账号与租户完毕，返回account:", account)
         return account
 
     @staticmethod

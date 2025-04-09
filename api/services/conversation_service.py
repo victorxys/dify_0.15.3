@@ -34,7 +34,7 @@ class ConversationService:
             return InfiniteScrollPagination(data=[], limit=limit, has_more=False)
         
         print("\n=== 对话列表查询开始 ===")
-        print(f"用户信息:")
+        print("用户信息:")
         print(f"- 类型: {user.__class__.__name__}")
         print(f"- ID: {user.id}")
         print(f"- 应用ID: {app_model.id}")
@@ -43,7 +43,7 @@ class ConversationService:
         from_end_user_id = user.id if isinstance(user, EndUser) else None
         from_account_id = user.id if isinstance(user, Account) else None
         
-        print(f"\n查询条件:")
+        print("\n查询条件:")
         print(f"- 来源 (from_source): {from_source}")
         print(f"- 终端用户ID (from_end_user_id): {from_account_id}")
         print(f"- 账户ID (from_account_id): {from_end_user_id}")
@@ -52,8 +52,10 @@ class ConversationService:
             Conversation.is_deleted == False,
             Conversation.app_id == app_model.id,
             Conversation.from_source == from_source,
-            # 由于conversation表中使用 enduser_id 作为记录的，但是现在改为了 用户类型为 account 所以 from_end_user_id 为空
-            # 因此为了可以按当前用户 account_id 来查询此用户的所有对话，这里互换来了查询的值，用 from_account_id来查询
+            # 由于conversation表中使用 enduser_id 作为记录的，
+            # 但是现在改为了 用户类型为 account 所以 from_end_user_id 为空
+            # 因此为了可以按当前用户 account_id 来查询此用户的所有对话，
+            # 这里互换来了查询的值，用 from_account_id来查询
             Conversation.from_end_user_id == from_account_id,
             Conversation.from_account_id == from_end_user_id,
             or_(Conversation.invoke_from.is_(None), Conversation.invoke_from == invoke_from.value),
@@ -184,13 +186,13 @@ class ConversationService:
     @classmethod
     def get_conversation(cls, app_model: App, conversation_id: str, user: Optional[Union[Account, EndUser]]):
         print("\n=== 获取单个对话 ===")
-        print(f"用户信息:")
+        print("用户信息:")
         print(f"- 类型: {user.__class__.__name__}")
         print(f"- ID: {user.id}")
         print(f"- 应用ID: {app_model.id}")
         print(f"请求的对话ID: {conversation_id}")
 
-         # from_source = "api" if isinstance(user, EndUser) else "console" 此处对 api console 进行了对调
+        # from_source = "api" if isinstance(user, EndUser) else "console" 此处对 api console 进行了对调
         from_source = "console" if isinstance(user, EndUser) else "api"
 
         conversation = (
@@ -198,9 +200,12 @@ class ConversationService:
             .filter(
                 Conversation.id == conversation_id,
                 Conversation.app_id == app_model.id,
-                Conversation.from_source == ("console" if isinstance(user, EndUser) else "api"), #此处对api 与 console 进行了对调
-                Conversation.from_end_user_id == (user.id if isinstance(user, Account) else None), # 此处对Account 与 EndUser 进行了对调
-                Conversation.from_account_id == (user.id if isinstance(user, EndUser) else None), # 此处对Account 与 EndUser 进行了对调
+                # 此处对api 与 console 进行了对调
+                Conversation.from_source == ("console" if isinstance(user, EndUser) else "api"), 
+                # 此处对Account 与 EndUser 进行了对调
+                Conversation.from_end_user_id == (user.id if isinstance(user, Account) else None), 
+                # 此处对Account 与 EndUser 进行了对调
+                Conversation.from_account_id == (user.id if isinstance(user, EndUser) else None), 
                 Conversation.is_deleted == False,
             )
             .first()
@@ -214,7 +219,7 @@ class ConversationService:
     @classmethod
     def delete(cls, app_model: App, conversation_id: str, user: Optional[Union[Account, EndUser]]):
         print("\n=== 删除对话开始 ===")
-        print(f"用户信息:")
+        print("用户信息:")
         print(f"- 类型: {user.__class__.__name__}")
         print(f"- ID: {user.id}")
         print(f"要删除的对话ID: {conversation_id}")
@@ -230,7 +235,7 @@ class ConversationService:
         conversation.updated_at = datetime.now(UTC).replace(tzinfo=None)
         db.session.commit()
 
-        print(f"对话删除成功:")
+        print("对话删除成功:")
         print(f"- 对话ID: {conversation.id}")
         print(f"- 删除时间: {conversation.updated_at}")
         print("=== 删除对话完成 ===\n")

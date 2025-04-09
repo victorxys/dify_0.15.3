@@ -1,9 +1,10 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 from flask_login import login_user
+
 from services.account_service import AccountService, RegisterService
-from models.account import Account
 
 bp = Blueprint('auth', __name__)
+
 
 @bp.route('/login', methods=['POST'])
 def login():

@@ -1,4 +1,5 @@
 from controllers.console import api
+
 from .login import LoginApi, RegisterApi
 
 # 注册认证相关路由

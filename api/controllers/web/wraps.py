@@ -7,8 +7,8 @@ from werkzeug.exceptions import BadRequest, NotFound, Unauthorized
 from controllers.web.error import WebSSOAuthRequiredError
 from extensions.ext_database import db
 from libs.passport import PassportService
-from models.model import App, EndUser, Site
 from models.account import Account
+from models.model import App, EndUser, Site
 from services.enterprise.enterprise_service import EnterpriseService
 from services.feature_service import FeatureService
 
@@ -17,7 +17,8 @@ def validate_jwt_token(view=None):
     def decorator(view):
         @wraps(view)
         def decorated(*args, **kwargs):
-            # 这里从 end_user 改为 account 此时返回的就全是 account 对象了，但是由于后面应用此处的太多了，仍然都是 end_user 没有做修改。
+            # 这里从 end_user 改为 account 此时返回的就全是 account 对象了，
+            # 但是由于后面应用此处的太多了，仍然都是 end_user 没有做修改。
             # 但实际上取值已经是 account 了
             app_model, account = decode_jwt_token()
 
@@ -67,7 +68,6 @@ def decode_jwt_token():
         if not account:
             raise NotFound()
             
-
         _validate_web_sso_token(decoded, system_features, app_code)
 
         return app_model, account

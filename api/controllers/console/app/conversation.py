@@ -5,9 +5,9 @@ from flask_login import current_user  # type: ignore
 from flask_restful import Resource, marshal_with, reqparse  # type: ignore
 from flask_restful.inputs import int_range  # type: ignore
 from sqlalchemy import func, or_
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.orm import joinedload
 from werkzeug.exceptions import Forbidden, NotFound
-from sqlalchemy.dialects import postgresql
 
 from controllers.console import api
 from controllers.console.app.wraps import get_app_model
@@ -22,7 +22,7 @@ from fields.conversation_fields import (
 )
 from libs.helper import DatetimeString
 from libs.login import login_required
-from models import Conversation, EndUser, Message, MessageAnnotation, Account
+from models import Account, Conversation, EndUser, Message, MessageAnnotation
 from models.model import AppMode
 
 
@@ -195,11 +195,11 @@ class ChatConversationApi(Resource):
                         subquery.c.from_end_user_session_id.ilike(keyword_filter),
                     ),
                 )
-                .group_by(Conversation.id, Account.id) # 添加 Account.id
+                .group_by(Conversation.id, Account.id)  # 添加 Account.id
 
             )
         else:
-            query = query.group_by(Conversation.id, Account.id) # 添加 group_by
+            query = query.group_by(Conversation.id, Account.id)  # 添加 group_by
 
         account = current_user
         timezone = pytz.timezone(account.timezone)
@@ -272,9 +272,9 @@ class ChatConversationApi(Resource):
         for item in conversations.items[:5]:  # 打印前 5 个元素
             print(item)
             if isinstance(item, tuple):
-                print(item[1]) # 如果是元组，打印第二个元素 (account_name)
+                print(item[1])  # 如果是元组，打印第二个元素 (account_name)
             else:
-                print(getattr(item, 'from_end_user_account_name', None)) # 如果是对象，尝试获取属性
+                print(getattr(item, 'from_end_user_account_name', None))  # 如果是对象，尝试获取属性
 
         return conversations
 

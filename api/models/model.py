@@ -1322,6 +1322,7 @@ class OperationLog(db.Model):  # type: ignore[name-defined]
     created_ip = db.Column(db.String(255), nullable=False)
     updated_at = db.Column(db.DateTime, nullable=False, server_default=func.current_timestamp())
 
+
 # 获取enduser
 class EndUser(UserMixin, db.Model):  # type: ignore[name-defined]
     __tablename__ = "end_users"

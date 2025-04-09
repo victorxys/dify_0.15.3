@@ -32,7 +32,7 @@ from services.billing_service import BillingService
 from services.errors.account import AccountRegisterError
 from services.errors.workspace import WorkSpaceNotAllowedCreateError
 from services.feature_service import FeatureService
-from services.errors.account import AccountRegisterError
+
 
 class UserExistsCheckApi(Resource):
     @setup_required
@@ -52,6 +52,7 @@ class UserExistsCheckApi(Resource):
             # Handle other potential errors gracefully
             logging.exception("Error checking user existence")
             return {"exists": False}, 500
+
 
 class LoginApi(Resource):
     """Resource for user login."""
@@ -115,6 +116,7 @@ class LoginApi(Resource):
         AccountService.reset_login_error_rate_limit(args["email"])
         return {"result": "success", "data": token_pair.model_dump()}
 
+
 class LogoutApi(Resource):
     @setup_required
     def get(self):
@@ -124,6 +126,7 @@ class LogoutApi(Resource):
         AccountService.logout(account=account)
         flask_login.logout_user()
         return {"result": "success"}
+
 
 class ResetPasswordSendEmailApi(Resource):
     @setup_required
@@ -150,6 +153,7 @@ class ResetPasswordSendEmailApi(Resource):
             token = AccountService.send_reset_password_email(account=account, language=language)
 
         return {"result": "success", "data": token}
+
 
 class EmailCodeLoginSendEmailApi(Resource):
     @setup_required
@@ -181,6 +185,7 @@ class EmailCodeLoginSendEmailApi(Resource):
             token = AccountService.send_email_code_login_email(account=account, language=language)
 
         return {"result": "success", "data": token}
+
 
 class EmailCodeLoginApi(Resource):
     @setup_required
@@ -232,6 +237,7 @@ class EmailCodeLoginApi(Resource):
         AccountService.reset_login_error_rate_limit(args["email"])
         return {"result": "success", "data": token_pair.model_dump()}
 
+
 class RefreshTokenApi(Resource):
     def post(self):
         parser = reqparse.RequestParser()
@@ -244,6 +250,7 @@ class RefreshTokenApi(Resource):
         except Exception as e:
             return {"result": "fail", "data": str(e)}, 401
 
+
 class RegisterApi(Resource):
     """Resource for user registration."""
     @setup_required
@@ -255,7 +262,6 @@ class RegisterApi(Resource):
         parser.add_argument("interface_language", type=str, required=False, default="en-US", location="json")
         args = parser.parse_args()
         user_email = args["email"]
-
 
         try:
             account = AccountService.get_user_through_email(args["email"])
@@ -277,7 +283,6 @@ class RegisterApi(Resource):
             except AccountRegisterError as are:
                 raise AccountInFreezeError()
 
-        
         try:
             # 先通过 authenticate 验证身份
             account = AccountService.authenticate(args["email"], args["password"])
@@ -305,11 +310,12 @@ class RegisterApi(Resource):
             print(f"登录错误：{str(e)}")
             return {"result": "error", "message": str(e)}
 
+
 api.add_resource(LoginApi, "/login")
 api.add_resource(LogoutApi, "/logout")
 api.add_resource(EmailCodeLoginSendEmailApi, "/email-code-login")
 api.add_resource(EmailCodeLoginApi, "/email-code-login/validity")
 api.add_resource(ResetPasswordSendEmailApi, "/reset-password")
 api.add_resource(RefreshTokenApi, "/refresh-token")
-api.add_resource(RegisterApi, "/register") # 注意这里改为 /register
-api.add_resource(UserExistsCheckApi, "/user-exists") # Add route for user existence check
+api.add_resource(RegisterApi, "/register")  # 注意这里改为 /register
+api.add_resource(UserExistsCheckApi, "/user-exists")  # Add route for user existence check
