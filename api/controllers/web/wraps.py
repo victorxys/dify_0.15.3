@@ -36,9 +36,9 @@ def decode_jwt_token():
     app_code = request.headers.get("X-App-Code")
     try:
         auth_header = request.headers.get("Authorization")
-        account_id = request.headers.get("X-User-Id")
-        print(f"account_id=====: {account_id}")
-        print(f"Authorization header=====: {auth_header}")
+        # account_id = request.headers.get("X-User-Id")
+        # print(f"account_id=====: {account_id}")
+        # print(f"Authorization header=====: {auth_header}")
         if auth_header is None:
             raise Unauthorized("Authorization header is missing.")
 
@@ -51,7 +51,7 @@ def decode_jwt_token():
         if auth_scheme != "bearer":
             raise Unauthorized("Invalid Authorization header format. Expected 'Bearer <api-key>' format.")
         decoded = PassportService().verify(tk)
-        print(f"decoded=====: {decoded}")
+        # print(f"decoded=====: {decoded}")
         app_code = decoded.get("app_code")
         app_model = db.session.query(App).filter(App.id == decoded["app_id"]).first()
         site = db.session.query(Site).filter(Site.code == app_code).first()
@@ -62,15 +62,15 @@ def decode_jwt_token():
         if app_model.enable_site is False:
             raise BadRequest("Site is disabled.")
         end_user = db.session.query(EndUser).filter(EndUser.id == decoded["end_user_id"]).first()
-        account = db.session.query(Account).filter(Account.id == decoded["account_id"]).first()
+        # account = db.session.query(Account).filter(Account.id == decoded["account_id"]).first()
         if not end_user:
             raise NotFound()
-        if not account:
-            raise NotFound()
+        # if not account:
+        #     raise NotFound()
             
         _validate_web_sso_token(decoded, system_features, app_code)
 
-        return app_model, account
+        return app_model, end_user
     except Unauthorized as e:
         if system_features.sso_enforced_for_web:
             app_web_sso_enabled = EnterpriseService.get_app_web_sso_enabled(app_code).get("enabled", False)

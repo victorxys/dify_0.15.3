@@ -1,60 +1,83 @@
-// For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/anaconda
+// .devcontainer/devcontainer.json
 {
-	"name": "Python 3.12",
-	"build": { 
-		"context": "..",
-		"dockerfile": "Dockerfile",
-		"args": {
-            "USER_ID": "1001",
-            "GROUP_ID": "1001"
+    "name": "Dify API Dev Container", // Dev Container 的名字
+
+    // 指向您现有的 Docker Compose 文件
+    // 路径相对于 .devcontainer 文件夹
+    "dockerComposeFile": [
+        "../docker/docker-compose.yaml"
+    ],
+
+    // 指定 VS Code 要附加到的 Docker Compose 服务
+    "service": "api",
+
+    // 指定 VS Code 在容器中打开的工作区文件夹
+    // 基于 api/Dockerfile 中的 WORKDIR 和 COPY 指令
+    "workspaceFolder": "/app/api",
+
+    // 关闭 VS Code 时执行的操作 (停止整个 compose stack)
+    "shutdownAction": "stopCompose",
+
+    // (可选) 添加常用的开发工具特性
+    "features": {
+        // 安装 Git
+        "ghcr.io/devcontainers/features/git:1": {}
+        // 如果需要在 Dev Container 内部构建或运行其他 Docker 镜像，可以取消注释下面这行
+        // "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+    },
+
+    // (可选) 自定义 VS Code 设置
+    "customizations": {
+        "vscode": {
+            "settings": {
+                // 告诉 Python 扩展解释器的路径 (基于 api/Dockerfile 中的 Poetry 配置)
+                "python.defaultInterpreterPath": "/app/api/.venv/bin/python",
+                "python.interpreter.path": "/app/api/.venv/bin/python",
+                // (如果需要) 配置 Linter 和 Formatter
+                "[python]": {
+                    "editor.defaultFormatter": "ms-python.black-formatter",
+                    "editor.formatOnSave": true,
+                    "editor.codeActionsOnSave": {
+                        "source.organizeImports": "explicit"
+                    }
+                },
+                "flake8.path": ["/app/api/.venv/bin/flake8"],
+                "black-formatter.path": ["/app/api/.venv/bin/black"],
+                "isort.path": ["/app/api/.venv/bin/isort"],
+                "mypy-type-checker.path": ["/app/api/.venv/bin/mypy"],
+                // 设置默认终端
+                "terminal.integrated.defaultProfile.linux": "bash"
+            },
+            // (可选) 推荐安装的 VS Code 扩展
+            "extensions": [
+                "ms-python.python",                     // Python 核心支持
+                "ms-python.debugpy",                    // Python 调试
+                "ms-python.flake8",                     // Flake8 Linter
+                "ms-python.black-formatter",            // Black Formatter
+                "ms-python.isort",                      // iSort Importer
+                "ms-python.mypy-type-checker",          // MyPy Type Checker
+                "ms-azuretools.vscode-docker",          // Docker 支持
+                "njpwerner.autodocstring",              // Python Docstring 生成器
+                "VisualStudioExptTeam.vscodeintellicode" // AI 辅助开发
+                // 根据需要添加其他扩展，例如数据库客户端等
+            ]
         }
-	},
-	"features": {
-		"ghcr.io/devcontainers/features/node:1": {
-			"nodeGypDependencies": true,
-			"version": "lts"
-		},
-		"ghcr.io/devcontainers-contrib/features/npm-package:1": {
-			"package": "typescript",
-			"version": "latest"
-		},
-		"ghcr.io/devcontainers/features/docker-in-docker:2": {
-			"moby": true,
-			"azureDnsAutoDetection": true,
-			"installDockerBuildx": true,
-			"version": "latest",
-			"dockerDashComposeVersion": "v2"
-		}
-	},
-	"customizations": {
-		"vscode": {
-			"extensions": [
-				"ms-python.pylint",
-				"GitHub.copilot",
-				"ms-python.python"
-			]
-		}
-	},
-	// "postStartCommand": "./.devcontainer/post_start_command.sh",
-	// "postCreateCommand": "./.devcontainer/post_create_command.sh",
-	// "remoteUser": "root"
-	"remoteUser": "vscode" // 使用在 Dockerfile 中创建的用户名
+    },
 
-	
+    // (可选) 转发端口，将容器端口映射到本地机器
+    "forwardPorts": [5001], // 转发 API 服务的端口
 
-	// Features to add to the dev container. More info: https://containers.dev/features.
-	// "features": {},
+    // (可选) 容器创建后、VS Code 附加前执行的命令
+    // 例如，如果需要安装 pre-commit hooks
+    // "postCreateCommand": "poetry run pre-commit install",
 
-	// Use 'forwardPorts' to make a list of ports inside the container available locally.
-	// "forwardPorts": [],
+    // (可选) 每次 VS Code 附加时执行的命令
+    // "postAttachCommand": ""
 
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "python --version",
-
-	// Configure tool-specific properties.
-	// "customizations": {},
-
-	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
-	// "remoteUser": "root"
+    // (可选) 为 Dev Container 添加额外的环境变量或 Docker 运行参数
+    // 例如，强制开启 Debug 模式
+    // "containerEnv": {
+    //  "FLASK_DEBUG": "true"
+    // }
+    // "runArgs": ["--env-file", "../docker/.env"] // 如果 .env 不在 docker/ 目录下，需要明确指定
 }

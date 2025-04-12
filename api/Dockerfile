@@ -8,8 +8,11 @@ ENV POETRY_VERSION=2.0.1
 
 # if you located in China, you can use aliyun mirror to speed up
 # RUN pip install --no-cache-dir poetry==${POETRY_VERSION} -i https://mirrors.aliyun.com/pypi/simple/
+RUN pip install --no-cache-dir poetry==${POETRY_VERSION} 
 
-RUN pip install --no-cache-dir poetry==${POETRY_VERSION} -i https://pypi.tuna.tsinghua.edu.cn/simple/
+
+# RUN pip install --no-cache-dir poetry==${POETRY_VERSION} -i https://pypi.tuna.tsinghua.edu.cn/simple/
+
 
 # Configure Poetry
 ENV POETRY_CACHE_DIR=/tmp/poetry_cache
@@ -19,9 +22,12 @@ ENV POETRY_VIRTUALENVS_CREATE=true
 ENV POETRY_REQUESTS_TIMEOUT=15
 
 FROM base AS packages
+# 在这里添加代理环境变量设置
+# ENV HTTP_PROXY="http://host.docker.internal:7890"
+# ENV HTTPS_PROXY="http://host.docker.internal:7890"
 
 # if you located in China, you can use aliyun mirror to speed up
-RUN sed -i 's@deb.debian.org@mirrors.aliyun.com@g' /etc/apt/sources.list.d/debian.sources
+# RUN sed -i 's@deb.debian.org@mirrors.aliyun.com@g' /etc/apt/sources.list.d/debian.sources
 
 # # --- 在这里为 packages 阶段添加更换镜像源的命令 ---
 # # 尝试替换 /etc/apt/sources.list.d/debian.sources (如果存在)
@@ -31,6 +37,10 @@ RUN sed -i 's@deb.debian.org@mirrors.aliyun.com@g' /etc/apt/sources.list.d/debia
 # # 如果两者都不存在或替换失败，打印一条消息（但继续执行）
 #     echo "Could not replace debian sources in packages stage, using default."
 # ---------------------------------------------
+RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/ && \
+    pip config set global.timeout 600
+RUN poetry config repositories.aliyun https://mirrors.aliyun.com/pypi/simple/
+
 
 
 RUN apt-get update \
@@ -38,9 +48,10 @@ RUN apt-get update \
 
 # Install Python dependencies
 COPY pyproject.toml poetry.lock ./
-# RUN pip config set global.index-url https://mirrors.aliyun.com/pypi/simple/
+
 # RUN poetry config repositories.aliyun https://mirrors.aliyun.com/pypi/simple/ 
-RUN poetry config repositories.tuna https://pypi.tuna.tsinghua.edu.cn/simple/
+# RUN poetry config repositories.tuna https://pypi.tuna.tsinghua.edu.cn/simple/
+
 # RUN poetry config settings.repository tuna
 
 
@@ -64,9 +75,16 @@ ENV TZ=UTC
 
 WORKDIR /app/api
 
-RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources || \
-    sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list || \
-    echo "Could not replace debian sources, using default."
+# 在这里添加代理环境变量设置
+# ENV HTTP_PROXY="http://host.docker.internal:7890"
+# ENV HTTPS_PROXY="http://host.docker.internal:7890"
+# RUN sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list.d/debian.sources || \
+#     sed -i 's/deb.debian.org/mirrors.aliyun.com/g' /etc/apt/sources.list || \
+#     echo "Could not replace debian sources, using default."
+# 增加 pip 全局超时时间（例如 120 秒）
+RUN pip config set global.timeout 600
+
+
 
 RUN \
     apt-get update \

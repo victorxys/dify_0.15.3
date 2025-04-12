@@ -33,31 +33,22 @@ class ConversationService:
         if not user:
             return InfiniteScrollPagination(data=[], limit=limit, has_more=False)
         
-        print("\n=== 对话列表查询开始 ===")
-        print("用户信息:")
-        print(f"- 类型: {user.__class__.__name__}")
-        print(f"- ID: {user.id}")
-        print(f"- 应用ID: {app_model.id}")
-        # from_source = "api" if isinstance(user, EndUser) else "console" 此处对 api console 进行了对调
-        from_source = "console" if isinstance(user, EndUser) else "api"
+        # print("\n=== 对话列表查询开始 ===")
+        # print("用户信息:")
+        # print(f"- 类型: {user.__class__.__name__}")
+        # print(f"- ID: {user.id}")
+        # print(f"- 应用ID: {app_model.id}")
+
+        from_source = "api" if isinstance(user, EndUser) else "console"
         from_end_user_id = user.id if isinstance(user, EndUser) else None
         from_account_id = user.id if isinstance(user, Account) else None
-        
-        print("\n查询条件:")
-        print(f"- 来源 (from_source): {from_source}")
-        print(f"- 终端用户ID (from_end_user_id): {from_account_id}")
-        print(f"- 账户ID (from_account_id): {from_end_user_id}")
-        
+
         stmt = select(Conversation).where(
             Conversation.is_deleted == False,
             Conversation.app_id == app_model.id,
             Conversation.from_source == from_source,
-            # 由于conversation表中使用 enduser_id 作为记录的，
-            # 但是现在改为了 用户类型为 account 所以 from_end_user_id 为空
-            # 因此为了可以按当前用户 account_id 来查询此用户的所有对话，
-            # 这里互换来了查询的值，用 from_account_id来查询
-            Conversation.from_end_user_id == from_account_id,
-            Conversation.from_account_id == from_end_user_id,
+            Conversation.from_end_user_id == from_end_user_id,
+            Conversation.from_account_id == from_account_id,
             or_(Conversation.invoke_from.is_(None), Conversation.invoke_from == invoke_from.value),
         )
         
@@ -65,16 +56,6 @@ class ConversationService:
         initial_query = stmt.order_by(desc(Conversation.updated_at)).limit(limit)
         initial_results = session.scalars(initial_query).all()
         
-        print("\n=== 查询结果 ===")
-        print(f"查询到记录数: {len(initial_results)}")
-        if initial_results:
-            print("示例记录(前3条):")
-            for conv in initial_results[:3]:
-                print(f"  * 对话ID: {conv.id}")
-                print(f"    来源: {conv.from_source}")
-                print(f"    账户ID: {conv.from_account_id}")
-                print(f"    终端用户ID: {conv.from_end_user_id}")
-        print("=== 查询结果结束 ===\n")
 
         # 应用过滤条件
         if include_ids is not None:
@@ -113,13 +94,13 @@ class ConversationService:
             rest_count = session.scalar(count_stmt) or 0
             has_more = rest_count > 0
 
-        print("\n=== 最终分页结果 ===")
-        print(f"- 本页记录数: {len(conversations)}")
-        print(f"- 分页大小: {limit}")
-        print(f"- 是否有下一页: {has_more}")
-        if conversations:
-            print(f"- 本页最后一条记录ID: {conversations[-1].id}")
-        print("=== 查询完成 ===\n")
+        # print("\n=== 最终分页结果 ===")
+        # print(f"- 本页记录数: {len(conversations)}")
+        # print(f"- 分页大小: {limit}")
+        # print(f"- 是否有下一页: {has_more}")
+        # if conversations:
+        #     print(f"- 本页最后一条记录ID: {conversations[-1].id}")
+        # print("=== 查询完成 ===\n")
 
         return InfiniteScrollPagination(data=conversations, limit=limit, has_more=has_more)
 
@@ -185,34 +166,40 @@ class ConversationService:
 
     @classmethod
     def get_conversation(cls, app_model: App, conversation_id: str, user: Optional[Union[Account, EndUser]]):
-        print("\n=== 获取单个对话 ===")
-        print("用户信息:")
-        print(f"- 类型: {user.__class__.__name__}")
-        print(f"- ID: {user.id}")
-        print(f"- 应用ID: {app_model.id}")
-        print(f"请求的对话ID: {conversation_id}")
+        # print("\n=== 获取单个对话 ===")
+        # print("用户信息:")
+        # print(f"- 类型: {user.__class__.__name__}")
+        # print(f"- ID: {user.id}")
+        # print(f"- 应用ID: {app_model.id}")
+        # print(f"请求的对话ID: {conversation_id}")
 
-        # from_source = "api" if isinstance(user, EndUser) else "console" 此处对 api console 进行了对调
-        from_source = "console" if isinstance(user, EndUser) else "api"
+        from_source = "api" if isinstance(user, EndUser) else "console" #此处对 api console 进行了对调---恢复
+        # from_source = "console" if isinstance(user, EndUser) else "api"
+        from_end_user_id = user.id if isinstance(user, EndUser) else None
+        from_account_id = user.id if isinstance(user, Account) else None
 
         conversation = (
             db.session.query(Conversation)
             .filter(
                 Conversation.id == conversation_id,
                 Conversation.app_id == app_model.id,
-                # 此处对api 与 console 进行了对调
-                Conversation.from_source == ("console" if isinstance(user, EndUser) else "api"), 
-                # 此处对Account 与 EndUser 进行了对调
-                Conversation.from_end_user_id == (user.id if isinstance(user, Account) else None), 
-                # 此处对Account 与 EndUser 进行了对调
-                Conversation.from_account_id == (user.id if isinstance(user, EndUser) else None), 
+                Conversation.from_source == from_source,
+                Conversation.from_end_user_id == from_end_user_id,
+                Conversation.from_account_id == from_account_id,
                 Conversation.is_deleted == False,
+                # 如果需要，也检查 status == 'normal'
+                # Conversation.status == 'normal'
             )
             .first()
         )
 
+        
+
         if not conversation:
+            print(f"--- 查询失败: conv_id={conversation_id}, user_id={user.id}, is_end_user={from_end_user_id} ---", flush=True)
             raise ConversationNotExistsError()
+        else:
+            print(f"--- 查询成功: conv_id={conversation_id}, user_id={user.id}, is_end_user={from_account_id} ---", flush=True)
 
         return conversation
 

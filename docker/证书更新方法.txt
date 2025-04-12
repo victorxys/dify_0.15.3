@@ -1,0 +1,5 @@
+从 allin.xys.one 更新通配符证书
+scp root@allin.xys.one:/etc/letsencrypt/live/xys.one/fullchain.pem  ./nginx/ssl/dify.crt
+scp root@allin.xys.one:/etc/letsencrypt/live/xys.one/privkey.pem  ./nginx/ssl/dify.key
+
+输入服务器密码即可更新

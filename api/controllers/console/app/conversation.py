@@ -178,6 +178,7 @@ class ChatConversationApi(Resource):
          .outerjoin(Account, Conversation.from_end_user_id == Account.id)
         compiled = query.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True})
         print(str(compiled))
+        print("dev container")
         if args["keyword"]:
             keyword_filter = "%{}%".format(args["keyword"])
             query = (
@@ -266,15 +267,15 @@ class ChatConversationApi(Resource):
                 query = query.order_by(Conversation.created_at.desc())
 
         conversations = db.paginate(query, page=args["page"], per_page=args["limit"], error_out=False)
-        if conversations.items:
-            first_conversation = conversations.items[0]
-            print(first_conversation.__dict__)
-        for item in conversations.items[:5]:  # 打印前 5 个元素
-            print(item)
-            if isinstance(item, tuple):
-                print(item[1])  # 如果是元组，打印第二个元素 (account_name)
-            else:
-                print(getattr(item, 'from_end_user_account_name', None))  # 如果是对象，尝试获取属性
+        # if conversations.items:
+        #     first_conversation = conversations.items[0]
+        #     print(first_conversation.__dict__)
+        # for item in conversations.items[:5]:  # 打印前 5 个元素
+        #     print(item)
+        #     if isinstance(item, tuple):
+        #         print(item[1])  # 如果是元组，打印第二个元素 (account_name)
+        #     else:
+        #         print(getattr(item, 'from_end_user_account_name', None))  # 如果是对象，尝试获取属性
 
         return conversations
 
