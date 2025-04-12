@@ -160,6 +160,7 @@ module.exports = ({ theme }) => ({
 
       // Quotes
       blockquote: {
+	dispaly: 'none',
         fontWeight: '500',
         fontStyle: 'italic',
         color: 'var(--tw-prose-quotes)',
