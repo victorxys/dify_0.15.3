@@ -48,8 +48,7 @@ RUN apt-get update \
 
 # Install Python dependencies
 
-COPY pyproject.toml poetry.lock ./
-
+COPY api/pyproject.toml api/poetry.lock ./
 
 # RUN poetry config repositories.aliyun https://mirrors.aliyun.com/pypi/simple/ 
 # RUN poetry config repositories.tuna https://pypi.tuna.tsinghua.edu.cn/simple/
