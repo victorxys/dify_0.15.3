@@ -2,10 +2,15 @@
 FROM node:20-alpine3.20 AS base
 LABEL maintainer="takatost@gmail.com"
 
-# if you located in China, you can use aliyun mirror to speed up
-# RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+# --- BEGIN: Modify Alpine apk Source to Tsinghua ---
+# Backup original repositories file and overwrite with Tsinghua mirror
+RUN cp /etc/apk/repositories /etc/apk/repositories.bak && \
+    echo "http://mirrors.tuna.tsinghua.edu.cn/alpine/v$(cat /etc/alpine-release | cut -d'.' -f1,2)/main" > /etc/apk/repositories && \
+    echo "http://mirrors.tuna.tsinghua.edu.cn/alpine/v$(cat /etc/alpine-release | cut -d'.' -f1,2)/community" >> /etc/apk/repositories
+# --- END: Modify Alpine apk Source ---
 
-RUN apk add --no-cache tzdata
+# Update apk cache and install tzdata using the new mirror
+RUN apk update && apk add --no-cache tzdata
 
 
 # install packages
@@ -13,8 +18,11 @@ FROM base AS packages
 
 WORKDIR /app/web
 
-COPY package.json .
-COPY yarn.lock .
+# --- 修正 ---
+# 从构建上下文的 web/ 子目录复制
+COPY web/package.json .
+COPY web/yarn.lock .
+
 
 RUN corepack enable
 
@@ -26,9 +34,28 @@ RUN pnpm install --registry https://registry.npmmirror.com/
 
 # COPY .env .env
 
+
+
+# --- 添加验证步骤 ---
+RUN echo "--- Current directory: $(pwd) ---" && \
+    echo "--- Listing contents of /app/web: ---" && \
+    ls -la /app/web/ && \
+    echo "--- Checking if /app/web/node_modules exists and is a directory: ---" && \
+    if [ -d "/app/web/node_modules" ]; then \
+      echo "/app/web/node_modules found. Listing partial contents:"; \
+      ls -A /app/web/node_modules | head -n 10; \
+    else \
+      echo "/app/web/node_modules NOT found or is not a directory!"; \
+      exit 1; \
+    fi
+# --- 验证结束 ---
+# --- Optional: Reset registry if needed, though usually not necessary in build ---
+# RUN yarn config delete registry
+
 # build resources
 FROM base AS builder
 WORKDIR /app/web
+
 COPY --from=packages /app/web/ .
 COPY . .
 RUN corepack enable
@@ -47,6 +74,7 @@ ENV APP_API_URL=http://127.0.0.1:5001
 ENV PORT=3000
 ENV NEXT_TELEMETRY_DISABLED=1
 
+
 # 定义 pnpm 全局安装路径
 ENV PNPM_HOME="/pnpm" 
 # 将该路径添加到系统 PATH
@@ -64,16 +92,20 @@ RUN addgroup -g ${GROUP_ID} vscode && \
 ENV USER=vscode
 
 
+
 WORKDIR /app/web
 COPY --from=builder /app/web/public ./public
 COPY --from=builder /app/web/.next/standalone ./
 COPY --from=builder /app/web/.next/static ./.next/static
 
-COPY docker/pm2.json ./pm2.json
-COPY docker/entrypoint.sh ./entrypoint.sh
-
+# --- 修正 ---
+# 从构建上下文的 web/docker/ 子目录复制
+COPY web/docker/pm2.json ./pm2.json
+COPY web/docker/entrypoint.sh ./entrypoint.sh
+# --- 修正结束 ---
 
 # global runtime packages
+
 # RUN yarn global add pm2 \
 #     && yarn cache clean \
 #     && mkdir /.pm2 \
@@ -88,10 +120,12 @@ COPY docker/entrypoint.sh ./entrypoint.sh
     && chown -R ${USER}:${USER} /.pm2 /app/web ${PNPM_HOME}
 
 
+
 ARG COMMIT_SHA
 ENV COMMIT_SHA=${COMMIT_SHA}
 
 USER ${USER_ID}
 EXPOSE 3000
+
 ENTRYPOINT ["/bin/sh", "./entrypoint.sh"]
 
