@@ -1,0 +1,69 @@
+// .devcontainer-web/devcontainer.json
+{
+    "name": "Dify Web Dev Container", // 新的名称
+
+    // 仍然引用同一个 docker-compose 文件
+    "dockerComposeFile": [
+        "../docker/docker-compose.yaml"
+    ],
+
+    // --- 目标服务是 web ---
+    "service": "web",
+
+    // --- 工作区指向 WEB 代码挂载点 ---
+    "workspaceFolder": "/app/web",
+
+    "shutdownAction": "stopCompose", // 或者 "none" 如果不希望关闭 web 容器时停止整个 stack
+
+    // --- 可选：安装 Node.js 开发常用特性 ---
+    "features": {
+      "ghcr.io/devcontainers/features/node:1": { // 安装 Node.js (版本可指定)
+          "version": "lts" // 或者项目需要的具体版本
+      },
+       "ghcr.io/devcontainers/features/git:1": {}
+    },
+
+    "customizations": {
+        "vscode": {
+            // --- (可选) web 开发常用设置 ---
+            "settings": {
+              "editor.formatOnSave": true,
+              "[javascript]": {
+                  "editor.defaultFormatter": "esbenp.prettier-vscode"
+              },
+              "[typescript]": {
+                  "editor.defaultFormatter": "esbenp.prettier-vscode"
+              },
+              "[typescriptreact]": {
+                  "editor.defaultFormatter": "esbenp.prettier-vscode"
+              },
+              "terminal.integrated.defaultProfile.linux": "bash"
+              // 如果需要指定 Node 路径 (通常不需要，因为 feature 会安装)
+              // "eslint.nodePath": "/usr/local/bin/node",
+            },
+            // --- 添加 WEB 开发常用扩展 ---
+            "extensions": [
+                "dbaeumer.vscode-eslint",         // ESLint
+                "esbenp.prettier-vscode",       // Prettier 代码格式化
+                "msjsdiag.debugger-for-chrome", // Chrome Debugger (如果需要)
+                "ms-vscode.vscode-typescript-next", // TypeScript 支持 (如果使用 TS)
+                "bradlc.vscode-tailwindcss",    // Tailwind CSS 支持 (如果使用)
+                "ms-azuretools.vscode-docker",    // Docker 扩展
+                "VisualStudioExptTeam.vscodeintellicode"
+                // 添加其他项目需要的扩展，如 React, Vue, Svelte 等
+            ]
+        }
+    },
+
+    // --- 转发 WEB 开发服务器端口 (假设是 3000) ---
+    "forwardPorts": [3000],
+
+    // --- 可选：首次创建容器后安装依赖 ---
+    // 这个命令会在容器首次构建后运行 (需要先安装 Node.js feature)
+    "postCreateCommand": "cd /app/web && yarn install" // 或者 npm install
+
+    // "postAttachCommand": "cd /app/web && yarn dev" // 可选：每次附加时自动启动开发服务器
+
+    // "containerEnv": {}
+    // "runArgs": []
+}
