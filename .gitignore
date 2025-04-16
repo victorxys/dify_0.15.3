@@ -193,3 +193,11 @@ api/.vscode
 
 .idea/
 .vscode
+
+
+# Pre-release environment files
+docker/docker-compose-prerelease.yaml
+docker/volumes-prerelease/
+
+# Specific local files (use the actual name or pattern)
+docker/证书更新方法.txt

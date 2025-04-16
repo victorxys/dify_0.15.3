@@ -7,6 +7,8 @@ if [[ "${MIGRATION_ENABLED}" == "true" ]]; then
   flask upgrade-db
 fi
 
+# echo "Skipping actual service start, sleeping infinitely for debug..." # 我们加的日志
+
 if [[ "${MODE}" == "worker" ]]; then
 
   # Get the number of available CPU cores
@@ -35,6 +37,7 @@ else
       --worker-class ${SERVER_WORKER_CLASS:-gevent} \
       --worker-connections ${SERVER_WORKER_CONNECTIONS:-10} \
       --timeout ${GUNICORN_TIMEOUT:-200} \
-      app:app
+      "app_factory:create_app()"
   fi
 fi
+# sleep infinity # 脚本的最后一行
