@@ -114,7 +114,10 @@ RUN apt-get update \
 
 # Install Python dependencies
 
-COPY api/pyproject.toml api/poetry.lock ./
+# COPY api/pyproject.toml api/poetry.lock ./
+COPY pyproject.toml poetry.lock ./           
+# <--- 新的，正确
+
 
 # RUN poetry config repositories.aliyun https://mirrors.aliyun.com/pypi/simple/ 
 # RUN poetry config repositories.tuna https://pypi.tuna.tsinghua.edu.cn/simple/
@@ -211,10 +214,15 @@ ENV PATH="${VIRTUAL_ENV}/bin:${PATH}"
 RUN python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')"
 
 # Copy source code
-COPY ./api /app/api/
+# COPY ./api /app/api/
+COPY . /app/api/     
+# <--- 新的，正确 (将构建上下文的所有内容复制进去)
 
 # Copy entrypoint
-COPY api/docker/entrypoint.sh /entrypoint.sh
+# COPY api/docker/entrypoint.sh /entrypoint.sh
+COPY docker/entrypoint.sh /entrypoint.sh    
+# <--- 新的，正确
+
 RUN chmod +x /entrypoint.sh
 
 ARG COMMIT_SHA
