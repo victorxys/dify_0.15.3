@@ -2,143 +2,104 @@
 FROM node:20-alpine3.20 AS base
 LABEL maintainer="takatost@gmail.com"
 
-# --- BEGIN: Modify Alpine apk Source to Tsinghua ---
-RUN cp /etc/apk/repositories /etc/apk/repositories.bak && \
-    echo "http://mirrors.tuna.tsinghua.edu.cn/alpine/v$(cat /etc/alpine-release | cut -d'.' -f1,2)/main" > /etc/apk/repositories && \
-    echo "http://mirrors.tuna.tsinghua.edu.cn/alpine/v$(cat /etc/alpine-release | cut -d'.' -f1,2)/community" >> /etc/apk/repositories
-# --- END: Modify Alpine apk Source ---
+# if you located in China, you can use aliyun mirror to speed up
+# RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
-RUN apk update && apk add --no-cache tzdata
+RUN apk add --no-cache tzdata
 
 
-# install packages stage
+# install packages
 FROM base AS packages
 
 WORKDIR /app/web
 
-# 启用 corepack 来管理 pnpm
-RUN corepack enable
-
-# 复制依赖定义文件
-# --- 修正: 假设你使用 pnpm，复制 pnpm-lock.yaml (如果存在) ---
 COPY web/package.json .
-# 如果你使用 pnpm lockfile, 取消下面一行的注释并注释掉 yarn.lock
 COPY web/pnpm-lock.yaml .
-# COPY web/yarn.lock . # 如果用 pnpm，注释掉这行
 
-# 使用淘宝镜像安装依赖
-# --frozen-lockfile 确保使用 lock 文件版本，如果 lock 文件存在且最新
-RUN pnpm install --frozen-lockfile --registry https://registry.npmmirror.com/ || \
-    (echo "Frozen lockfile failed, attempting install without frozen lockfile..." && \
-     pnpm install --registry https://registry.npmmirror.com/) # 如果 frozen 失败，尝试普通 install
-
-# --- 添加验证 node_modules 步骤 ---
-RUN echo "--- Checking if /app/web/node_modules exists after pnpm install ---" && \
-    if [ -d "/app/web/node_modules" ]; then \
-      echo "/app/web/node_modules found."; \
-    else \
-      echo "/app/web/node_modules NOT found!"; \
-      exit 1; \
-    fi
-# --- 验证结束 ---
-
-
-# build resources stage
-FROM base AS builder
-
-WORKDIR /app/web
-
-# 启用 corepack
 RUN corepack enable
 
-# 从 packages 阶段复制 node_modules 和 package.json
-COPY --from=packages /app/web/node_modules ./node_modules
-COPY --from=packages /app/web/package.json ./package.json
-# 如果需要 lock 文件进行构建 (通常不需要，但以防万一)
-# COPY --from=packages /app/web/pnpm-lock.yaml ./pnpm-lock.yaml
+# if you located in China, you can use taobao registry to speed up
+# RUN yarn install --frozen-lockfile --registry https://registry.npmmirror.com/
 
-# --- 修正: 只复制 web 目录的源代码 ---
+RUN pnpm install --frozen-lockfile --registry https://registry.npmmirror.com/
+# RUN pnpm install --registry https://registry.npmmirror.com/
+
+# COPY .env .env
+
+# build resources
+FROM base AS builder
+WORKDIR /app/web
+# COPY --from=packages /app/web/ .
+# COPY --from=packages /app/web/node_modules ./node_modules
+# COPY --from=packages /app/web/package.json ./package.json
+
+# 先从 packages 阶段拷贝依赖清单和安装好的依赖
+COPY --from=packages /app/web/package.json /app/web/pnpm-lock.yaml ./
+COPY --from=packages /app/web/node_modules ./node_modules
+
 COPY web/ ./
 
-# --- 添加验证源代码步骤 ---
-RUN echo "--- Listing contents of /app/web before build ---" && \
-    ls -la /app/web/ && \
-    if [ -d "/app/web/app" ]; then \
-       echo "/app/web/app directory found."; \
-    elif [ -d "/app/web/pages" ]; then \
-       echo "/app/web/pages directory found."; \
-    else \
-       echo "Neither /app/web/app nor /app/web/pages directory found!"; \
-       exit 1; \
-    fi
-# --- 验证结束 ---
+RUN corepack enable
+# RUN yarn build
+RUN pnpm run build
 
-# 使用淘宝镜像运行构建
-RUN pnpm config set registry https://registry.npmmirror.com/ && \
-    pnpm run build
 
 # production stage
 FROM base AS production
 
-# 设置非 root 用户
+ENV NODE_ENV=production
+ENV EDITION=SELF_HOSTED
+ENV DEPLOY_ENV=PRODUCTION
+ENV CONSOLE_API_URL=http://127.0.0.1:5001
+ENV APP_API_URL=http://127.0.0.1:5001
+ENV PORT=3000
+ENV NEXT_TELEMETRY_DISABLED=1
+
+# 定义 pnpm 全局安装路径
+ENV PNPM_HOME="/pnpm" 
+# 将该路径添加到系统 PATH
+ENV PATH="${PNPM_HOME}:${PATH}" 
+
+# 设置时区为 Asia/Shanghai (UTC+8)
+ENV TZ=Asia/Shanghai
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# Create the non-root user and set permissions
 ARG USER_ID=1001
 ARG GROUP_ID=1001
 RUN addgroup -g ${GROUP_ID} vscode && \
     adduser -u ${USER_ID} -G vscode -s /bin/sh -D vscode
+ENV USER=vscode
 
-# 设置必要的环境变量
-ENV NODE_ENV=production
-ENV EDITION=SELF_HOSTED
-ENV DEPLOY_ENV=PRODUCTION
-ENV CONSOLE_API_URL=${CONSOLE_API_URL:-http://127.0.0.1:5001} 
-ENV APP_API_URL=${APP_API_URL:-http://127.0.0.1:5001}       
-ENV PORT=3000
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV USER=vscode 
-ENV TZ=Asia/Shanghai
-
-# 设置 pnpm 全局路径并添加到 PATH (在切换用户前完成)
-ENV PNPM_HOME="/pnpm"
-ENV PATH="${PNPM_HOME}:${PATH}"
-RUN mkdir -p ${PNPM_HOME} && chown -R ${USER_ID}:${GROUP_ID} ${PNPM_HOME}
-
-# 安装必要的运行时系统包和设置时区 (切换用户前)
-RUN apk update && apk add --no-cache tzdata && \
-    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 WORKDIR /app/web
+COPY --from=builder /app/web/public ./public
+COPY --from=builder /app/web/.next/standalone ./
+COPY --from=builder /app/web/.next/static ./.next/static
 
-# 从 builder 阶段复制构建产物
-COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /app/web/public ./public
-COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /app/web/.next/standalone ./
-COPY --from=builder --chown=${USER_ID}:${GROUP_ID} /app/web/.next/static ./.next/static
+COPY web/docker/pm2.json ./pm2.json
+COPY web/docker/entrypoint.sh ./entrypoint.sh
 
-# 从构建上下文复制 pm2 和入口脚本
-COPY --chown=${USER_ID}:${GROUP_ID} web/docker/pm2.json ./pm2.json
-COPY --chown=${USER_ID}:${GROUP_ID} web/docker/entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh
 
-# 全局安装 pm2 (需要 root 权限，或者调整 PNPM_HOME 权限)
-# 切换回 root 安装全局包，然后再切回 vscode 用户可能更简单
-USER root
-RUN corepack enable && \
-    pnpm config set registry https://registry.npmmirror.com/ && \
-    pnpm add -g pm2 && \
-    pnpm cache clean && \
-    mkdir -p /.pm2
+# global runtime packages
+# RUN yarn global add pm2 \
+#     && yarn cache clean \
+#     && mkdir /.pm2 \
+#     && chown -R 1001:0 /.pm2 /app/web \
+#     && chmod -R g=u /.pm2 /app/web
 
-# 确保运行时目录权限正确
-RUN chown -R ${USER_ID}:${GROUP_ID} /app/web /.pm2
 
-# 切换到非 root 用户运行
-USER ${USER_ID}
 
-# 暴露端口
-EXPOSE 3000
+ RUN corepack enable && pnpm add -g pm2 \
+    && pnpm cache clean \
+    && mkdir -p /.pm2 \
+    && chown -R ${USER}:${USER} /.pm2 /app/web ${PNPM_HOME}
 
-# 设置 Commit SHA (如果需要)
+
 ARG COMMIT_SHA
 ENV COMMIT_SHA=${COMMIT_SHA}
 
-# 启动命令
+USER ${USER_ID}
+EXPOSE 3000
 ENTRYPOINT ["/bin/sh", "./entrypoint.sh"]
+

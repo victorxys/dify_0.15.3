@@ -9,6 +9,9 @@ logs
 node_modules
 .husky
 .next
+**/node_modules
+.git
+.env*
 
 # vscode
 .vscode
