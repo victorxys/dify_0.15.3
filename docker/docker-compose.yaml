@@ -397,7 +397,7 @@ services:
     build:
       context: ../api  # 相对于 docker-compose.yaml 的 api 目录路径
       dockerfile: Dockerfile # api 目录下的 Dockerfile
-    image: dify-api-local:latest # 给本地镜像命名 (可选但推荐)
+    image: test-dify-api:latest # 给本地镜像命名 (可选但推荐)
     restart: always
     environment:
       # Use the shared environment variables.
@@ -428,6 +428,7 @@ services:
     build:
       context: ../api  # 相对于 docker-compose.yaml 的 api 目录路径
       dockerfile: Dockerfile # api 目录下的 Dockerfile
+    image: test-dify-api:latest
     restart: always
     environment:
       # Use the shared environment variables.
@@ -456,7 +457,8 @@ services:
     build:
       context: ../web # 相对于 docker-compose.yaml 的 web 目录路径
       dockerfile: Dockerfile # web 目录下的 Dockerfile
-    image: dify-web-local:latest # 给本地镜像命名 (可选但推荐)
+    # image: dify-web-local:latest # 给本地镜像命名 (可选但推荐)
+    image: test-dify-web:latest
     restart: always
     environment:
       CONSOLE_API_URL: ${CONSOLE_API_URL:-}

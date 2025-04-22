@@ -2,36 +2,31 @@
 
 set -e
 
+# 定义 venv bin 路径
+VENV_BIN="/app/api/.venv/bin"
+
 if [[ "${MIGRATION_ENABLED}" == "true" ]]; then
   echo "Running migrations"
-  flask upgrade-db
+  # 使用绝对路径
+  "$VENV_BIN/flask" upgrade-db
 fi
 
-# echo "Skipping actual service start, sleeping infinitely for debug..." # 我们加的日志
-
 if [[ "${MODE}" == "worker" ]]; then
-
-  # Get the number of available CPU cores
-  if [ "${CELERY_AUTO_SCALE,,}" = "true" ]; then
-    # Set MAX_WORKERS to the number of available cores if not specified
-    AVAILABLE_CORES=$(nproc)
-    MAX_WORKERS=${CELERY_MAX_WORKERS:-$AVAILABLE_CORES}
-    MIN_WORKERS=${CELERY_MIN_WORKERS:-1}
-    CONCURRENCY_OPTION="--autoscale=${MAX_WORKERS},${MIN_WORKERS}"
-  else
-    CONCURRENCY_OPTION="-c ${CELERY_WORKER_AMOUNT:-1}"
-  fi
-
-  exec celery -A app.celery worker -P ${CELERY_WORKER_CLASS:-gevent} $CONCURRENCY_OPTION --loglevel ${LOG_LEVEL:-INFO} \
+  # ... (获取 CONCURRENCY_OPTION) ...
+  # 使用绝对路径
+  exec "$VENV_BIN/celery" -A app.celery worker -P ${CELERY_WORKER_CLASS:-gevent} $CONCURRENCY_OPTION --loglevel ${LOG_LEVEL:-INFO} \
     -Q ${CELERY_QUEUES:-dataset,mail,ops_trace,app_deletion}
 
 elif [[ "${MODE}" == "beat" ]]; then
-  exec celery -A app.celery beat --loglevel ${LOG_LEVEL:-INFO}
+  # 使用绝对路径
+  exec "$VENV_BIN/celery" -A app.celery beat --loglevel ${LOG_LEVEL:-INFO}
 else
   if [[ "${DEBUG}" == "true" ]]; then
-    exec flask run --host=${DIFY_BIND_ADDRESS:-0.0.0.0} --port=${DIFY_PORT:-5001} --debug
+    # 使用绝对路径
+    exec "$VENV_BIN/flask" run --host=${DIFY_BIND_ADDRESS:-0.0.0.0} --port=${DIFY_PORT:-5001} --debug
   else
-    exec gunicorn \
+    # 使用绝对路径
+    exec "$VENV_BIN/gunicorn" \
       --bind "${DIFY_BIND_ADDRESS:-0.0.0.0}:${DIFY_PORT:-5001}" \
       --workers ${SERVER_WORKER_AMOUNT:-1} \
       --worker-class ${SERVER_WORKER_CLASS:-gevent} \
@@ -40,4 +35,3 @@ else
       "app_factory:create_app()"
   fi
 fi
-# sleep infinity # 脚本的最后一行
