@@ -47,7 +47,7 @@ next-env.d.ts
 .yarnrc.yml
 
 # pmpm
-pnpm-lock.yaml
+# pnpm-lock.yaml
 
 .favorites.json
 *storybook.log
