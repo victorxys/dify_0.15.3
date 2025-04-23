@@ -413,6 +413,7 @@ services:
     volumes:
       # --- 添加 API 源码挂载 ---
       - ../api:/app/api  # 将本地 api 目录挂载到容器 /app/api
+      - api_venv:/app/api/.venv
       # Mount the storage directory to the container, for storing user files.
       - ./volumes/app/storage:/app/api/storage
     # --- 添加工作目录 ---
@@ -445,6 +446,7 @@ services:
         condition: service_healthy
     volumes:
       - ../api:/app/api # 挂载 api 源码 (worker 通常和 api 共享代码)
+      - api_venv:/app/api/.venv
       # Mount the storage directory to the container, for storing user files.
       - ./volumes/app/storage:/app/api/storage
     networks:
@@ -479,6 +481,7 @@ services:
       - web_node_modules:/app/web/node_modules
     # --- 添加工作目录 ---
     working_dir: /app/web
+    entrypoint: ["/bin/sh", "./docker/entrypoint.sh"]
 
   # The postgres database.
   db:
@@ -1002,6 +1005,7 @@ networks:
     internal: true
 
 volumes:
+  api_venv: # 定义 api_venv 卷
   web_node_modules: # 定义命名卷
   oradata:
   dify_es01_data:
