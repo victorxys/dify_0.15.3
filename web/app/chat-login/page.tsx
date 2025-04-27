@@ -46,9 +46,9 @@ const ChatLogin = () => {
   const [phone_number, setPhoneNumber] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  // 在 ChatLogin.tsx 中
+  const [isRedirecting, setIsRedirecting] = useState(false)
+  const [buttonText, setButtonText] = useState('登录') // 新增状态来控制按钮文字
+  const [setError] = useState('')
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -59,110 +59,89 @@ const ChatLogin = () => {
     }
 
     setIsLoading(true)
+    setButtonText('正在登录请稍候...')
     setError('')
 
     try {
       // --- 第一步：尝试外部登录 ---
       const loginRes = await login(phone_number, password)
-      // console.log('外部登录响应:', loginRes)
 
       // 检查外部登录是否成功并获取了必要信息
       if (loginRes?.access_token && loginRes?.user) {
-        const initialToken = loginRes.access_token // 可以先保存一下，虽然马上会被覆盖
+        setButtonText('正在跳转到AI助手...') // 更新按钮文字
+        // const initialToken = loginRes.access_token
         const user = loginRes.user
 
-        // 注意：这里可以暂时不写入 localStorage，或者写入后准备被覆盖
-        // localStorage.setItem(TOKEN_KEY, initialToken); // 临时写入或省略
-        // localStorage.setItem('user', JSON.stringify(user)); // 用户信息通常可以先写入
-
-        // --- 第二步：尝试在本系统注册并自动登录 ---
-        // console.log('外部登录成功，尝试在本系统注册/登录...')
         try {
-          // 准备注册数据
           const registrationPayload: RegistrationData = {
             email: `${phone_number}@mengyimengsao.com`,
             name: user.username || `User_${phone_number}`,
-            password: 'myms123456', // !!! 再次提醒：密码安全问题 !!!
+            password: 'myms123456',
             interface_language: 'zh-CN',
           }
 
-          // 调用并等待注册/登录完成，获取包含新 token 的响应数据
           const registerResult = await registerUser(registrationPayload)
-          // console.log('注册/自动登录成功，响应:', registerResult)
 
-          // --- 处理注册/登录结果，写入新 Token ---
-          // 检查后端返回结果是否成功，并且包含 data 和 access_token
           if (registerResult?.result === 'success' && registerResult?.data?.access_token) {
             const newAccessToken = registerResult.data.access_token
-            const newRefreshToken = registerResult.data.refresh_token // 获取 refresh token
+            // const newRefreshToken = registerResult.data.refresh_token
 
-            // console.log('注册/登录接口返回了新的凭证，更新 localStorage...')
-            // ******** 1. 写入/覆盖 localStorage ********
             localStorage.setItem(TOKEN_KEY, newAccessToken)
 
-            // ******** 2. 新增：写入 Cookie ********
-            const cookieKey = TOKEN_KEY // 确保使用与 localStorage 和中间件相同的键名
-            const maxAgeInSeconds = 86400 // 设置 Cookie 有效期为 1 天 (24 * 60 * 60 秒)
-            // 你可以根据需要调整有效期，例如设置为会话 Cookie (不设置 max-age 或 expires) 或更长时间
-
-            // 构建 Cookie 字符串
-            // path=/ 表示 Cookie 对整个网站有效
-            // SameSite=Lax 是一个推荐的安全设置
-            // 注意: document.cookie 不能设置 HttpOnly 标志，这是为了安全，防止脚本读取敏感 cookie
-            // 注意: 如果你的网站部署在 HTTPS 上，强烈建议添加 'Secure' 标志: `${cookieKey}=${newAccessToken}; path=/; max-age=${maxAgeInSeconds}; SameSite=Lax; Secure`
+            const cookieKey = TOKEN_KEY
+            const maxAgeInSeconds = 86400
             const cookieString = `${cookieKey}=${newAccessToken}; path=/; max-age=${maxAgeInSeconds}; SameSite=Lax`
 
             document.cookie = cookieString
-            // console.log(`Token 已写入 Cookie: ${cookieKey}=...`)
-
-            // ******** (可选) 存储 refresh token ********
-            // 注意：将 refresh token 存储在 localStorage 有安全风险，更好的做法是存储在 httpOnly cookie 中由服务器管理
-            // 但如果确实需要前端存储，可以这样做：
-            // localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken); // 需要定义 REFRESH_TOKEN_KEY
-
-            // 如果注册接口也更新了用户信息，可以在这里更新 'user'
-            // if (registerResult.data.user) { localStorage.setItem('user', JSON.stringify(registerResult.data.user)); }
-            // 否则，使用初始登录时获取的 user 信息通常是OK的
           }
           else {
-            // 虽然 registerUser 调用没抛错，但后端返回的不是成功状态或缺少 token
-            console.error('注册/登录响应无效或未包含 token:', registerResult)
-            // 根据业务逻辑决定如何处理，可能需要抛出错误阻止后续流程
             throw new Error('注册/登录后未能获取有效的用户凭证。')
           }
         }
         catch (error) {
-          // 捕获 registerUser 函数抛出的错误 (网络错误或后端返回错误状态)
-          console.error('自动注册/登录用户失败:', error)
-          // 向用户显示错误，并可能需要阻止跳转
           const errorMessage = error instanceof Error ? error.message : '未知错误'
           Toast.notify({
             type: 'error',
             message: `操作失败: ${errorMessage}`,
           })
-          // 抛出错误或 return，以阻止后续的成功提示和跳转
           throw error
         }
 
-        // --- 如果所有步骤都成功 ---
         Toast.notify({ type: 'success', message: '登录成功' })
-        // console.log('登录并创建用户成功，即将跳转到:', redirectUrl)
+        setIsRedirecting(true)
         router.push(redirectUrl)
       }
       else {
-        // 外部登录失败
-        console.error('外部登录失败：响应中缺少 access_token 或 user 信息')
         Toast.notify({ type: 'error', message: '外部登录失败：无效的响应' })
       }
     }
     catch (err) {
-      // 捕获外部登录 (login 函数) 或 注册/登录 (registerUser) 抛出的错误
-      console.error('登录流程中发生错误:', err)
-      // 确保不显示成功的 Toast
-      // Toast.notify({ type: 'error', message: `登录失败: ${err.message}` }); // Toast 消息已在各自的 catch 块中处理
+      setIsLoading(false)
+      setButtonText('登录') // 重置按钮文字状态
+
+      let errorMessage = '登录失败，请稍后再试。'
+
+      if (err && typeof err === 'object' && err.body && typeof err.body === 'object') {
+        if (err.body.error)
+          errorMessage = err.body.error
+        else
+          errorMessage = `服务器返回错误 (状态码: ${err.status})`
+      }
+      else if (err instanceof Error) {
+        errorMessage = err.message || '请求过程中发生错误。'
+      }
+      else {
+        errorMessage = '发生未知错误。'
+      }
+
+      Toast.notify({
+        type: 'error',
+        message: errorMessage,
+      })
     }
     finally {
-      setIsLoading(false)
+      if (!isRedirecting)
+        setIsLoading(false)
     }
   }
 
@@ -174,7 +153,6 @@ const ChatLogin = () => {
         router.push(redirectUrl)
     }
     catch (error) {
-      // Handle case where localStorage is not available (e.g., SSR)
       console.error('Error checking authentication:', error)
     }
   }, [redirectUrl, router])
@@ -291,10 +269,20 @@ const ChatLogin = () => {
             <Button
               type="submit"
               variant="primary"
-              loading={isLoading}
-              className={cn('w-full hover:!bg-[#408d86]')}
+              loading={isLoading || isRedirecting}
+              disabled={isLoading || isRedirecting}
+              className={cn(
+                'w-full',
+                (isLoading || isRedirecting)
+                  ? 'cursor-not-allowed opacity-70 !bg-gray-100'
+                  : 'hover:!bg-[#408d86]',
+              )}
+              style={{
+                color: (isLoading || isRedirecting) ? colors.primary : '#fff',
+                pointerEvents: (isLoading || isRedirecting) ? 'none' : 'auto',
+              }}
             >
-              {isLoading ? '正在登录...' : '登录'}
+              {buttonText}
             </Button>
           </div>
         </form>

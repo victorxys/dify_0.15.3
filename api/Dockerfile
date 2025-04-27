@@ -74,6 +74,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     expat libldap-2.5-0 perl libsqlite3-0 zlib1g \
     fonts-noto-cjk \
     libmagic1 \
+    libgmp10 \
+    libmpfr6 \
+    libmpc3 \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN python -c "import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')"

@@ -56,7 +56,6 @@ class ConversationService:
         initial_query = stmt.order_by(desc(Conversation.updated_at)).limit(limit)
         initial_results = session.scalars(initial_query).all()
         
-
         # 应用过滤条件
         if include_ids is not None:
             stmt = stmt.where(Conversation.id.in_(include_ids))
@@ -173,7 +172,7 @@ class ConversationService:
         # print(f"- 应用ID: {app_model.id}")
         # print(f"请求的对话ID: {conversation_id}")
 
-        from_source = "api" if isinstance(user, EndUser) else "console" #此处对 api console 进行了对调---恢复
+        from_source = "api" if isinstance(user, EndUser) else "console"  # 此处对 api console 进行了对调---恢复
         # from_source = "console" if isinstance(user, EndUser) else "api"
         from_end_user_id = user.id if isinstance(user, EndUser) else None
         from_account_id = user.id if isinstance(user, Account) else None
@@ -193,13 +192,15 @@ class ConversationService:
             .first()
         )
 
-        
-
         if not conversation:
-            print(f"--- 查询失败: conv_id={conversation_id}, user_id={user.id}, is_end_user={from_end_user_id} ---", flush=True)
+            print(f"--- 查询失败: conv_id={conversation_id}, user_id={user.id}, "
+                  f"is_end_user={from_end_user_id} ---", 
+                  flush=True)
             raise ConversationNotExistsError()
         else:
-            print(f"--- 查询成功: conv_id={conversation_id}, user_id={user.id}, is_end_user={from_account_id} ---", flush=True)
+            print(f"--- 查询成功: conv_id={conversation_id}, user_id={user.id}, "
+                  f"is_end_user={from_account_id} ---", 
+                  flush=True)
 
         return conversation
 

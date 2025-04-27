@@ -9,12 +9,59 @@ const basePost = async (url: string, data: any) => {
     headers: externalAuthConfig.headers,
     body: JSON.stringify(data),
     credentials: externalAuthConfig.withCredentials ? 'include' : 'omit',
+    // 如果需要设置超时，可能需要在这里使用 AbortController
   })
 
-  if (!response.ok)
-    throw new Error(`HTTP error! status: ${response.status}`)
+  // 检查非 2xx 状态码
+  if (!response.ok) {
+    let errorBody = null
+    // *** 第 1 步：尝试读取错误响应体（假设服务器返回的是 JSON） ***
+    // 检查 Content-Type 头部，确保它是 JSON
+    const contentType = response.headers.get('content-type')
+    if (contentType && contentType.includes('application/json')) {
+      try {
+        // 读取响应体是异步操作，需要 await
+        errorBody = await response.json()
+        //  console.error('basePost：服务器返回的错误响应体:', errorBody); // 打印一下看看内容，方便调试
+      }
+      catch (parseError) {
+        //  console.error("basePost：尝试解析错误响应体为 JSON 失败:", parseError);
+        // 如果解析失败，errorBody 保持为 null 或之前的默认值
+        throw new Error('尝试解析错误响应体为 JSON 失败')
+      }
+    }
+    else {
+      // 如果不是 JSON 类型，可能需要根据实际情况处理，例如读取为文本或者忽略
+      // console.warn("basePost：错误响应的 Content-Type 不是 JSON:", contentType, response.status, response.statusText);
+      // 可选：如果需要读取文本内容，可以使用 await response.text();
+      try {
+        const errorText = await response.text()
+        console.warn('错误响应文本:', errorText)
+      }
+      catch (e) {
+        console.error('basePost：尝试读取错误响应文本失败:', e)
+      }
+    }
 
-  return response.json()
+    const apiError: any = new Error(`HTTP error! status: ${response.status}`)
+
+    apiError.status = response.status
+
+    apiError.body = errorBody
+    throw apiError // 抛出这个包含了更多信息的 Error 对象
+  }
+
+  // 如果 response.ok 为 true (状态码是 2xx)，则读取并返回成功响应体
+  // 假设成功响应也是 JSON 格式
+  try {
+    const successBody = await response.json()
+    return successBody
+  }
+  catch (parseError) {
+    // console.error("basePost：尝试解析成功响应体为 JSON 失败:", parseError);
+    // 如果成功了但响应体解析失败，也需要处理，例如抛出新的错误
+    throw new Error('成功响应的格式不正确。')
+  }
 }
 
 export const login = async (phone_number: string, password: string) => {
@@ -42,7 +89,7 @@ export async function registerUser(registrationData: RegistrationData): Promise<
   }
 
   const apiUrl = `${apiPrefix}/register`
-  console.log(`向 ${apiUrl} 发送注册请求，数据:`, registrationData) // 调试日志
+  // console.log(`向 ${apiUrl} 发送注册请求，数据:`, registrationData) // 调试日志
 
   try {
     const response = await fetch(apiUrl, {

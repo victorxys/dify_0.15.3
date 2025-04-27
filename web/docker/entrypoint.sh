@@ -26,4 +26,6 @@ export NEXT_PUBLIC_CSP_WHITELIST=${CSP_WHITELIST}
 export NEXT_PUBLIC_TOP_K_MAX_VALUE=${TOP_K_MAX_VALUE}
 export NEXT_PUBLIC_INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH=${INDEXING_MAX_SEGMENTATION_TOKENS_LENGTH}
 
-pm2 start ./pm2.json --no-daemon
+# pm2 start ./pm2.json --no-daemon
+pm2 start /app/web/pm2.json --no-daemon
+
