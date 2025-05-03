@@ -48,8 +48,7 @@ const ChatLogin = () => {
   const [isLoading, setIsLoading] = useState(false)
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [buttonText, setButtonText] = useState('登录') // 新增状态来控制按钮文字
-  const [setError] = useState('')
-
+  const [error, setError] = useState('') // 修改这一行
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
@@ -158,14 +157,12 @@ const ChatLogin = () => {
   }, [redirectUrl, router])
 
   return (
-    <div
-      className={cn('flex min-h-screen flex-col justify-center px-6 py-12 lg:px-8 relative overflow-hidden')}
+    <div className={cn('flex min-h-screen flex-col justify-center px-6 py-12 lg:px-8 relative overflow-hidden')}
       style={{
         background: `linear-gradient(120deg, ${colors.bgLight} 0%, #E0F2F1 50%, #D0EBEA 100%)`,
       }}
     >
-      <div
-        className="absolute inset-0 opacity-50"
+      <div className="absolute inset-0 opacity-50"
         style={{
           background: `radial-gradient(circle at 30% 50%, ${colors.primary}1a 0%, transparent 25%),
                       radial-gradient(circle at 70% 20%, ${colors.primary}1a 0%, transparent 25%),
